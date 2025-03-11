@@ -2,9 +2,9 @@
 import { ref, computed, watch } from "vue";
 import marvelService from "~/services/marvel";
 
+const searchQuery = useState("marvelSearch", () => "");
 const currentPage = ref(0);
 const pageSize = ref(12);
-const searchQuery = ref("");
 const searchTimeout = ref(null);
 const totalItems = ref(0);
 
@@ -41,6 +41,15 @@ watch(
   { immediate: true }
 );
 
+watch(searchQuery, () => {
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value);
+  }
+  searchTimeout.value = setTimeout(() => {
+    currentPage.value = 0;
+  }, 500);
+});
+
 const characters = computed(() => {
   if (
     charactersResponse.value &&
@@ -60,32 +69,25 @@ const totalPages = computed(() => {
 const paginationRange = computed(() => {
   const totalPageCount = totalPages.value;
   const currentPageNum = currentPage.value + 1;
-
   const siblingCount = 1;
   const totalPageNumbers = siblingCount * 2 + 3;
-
   if (totalPageCount <= totalPageNumbers) {
     return Array.from({ length: totalPageCount }, (_, i) => i + 1);
   }
-
   const leftSiblingIndex = Math.max(currentPageNum - siblingCount, 1);
   const rightSiblingIndex = Math.min(
     currentPageNum + siblingCount,
     totalPageCount
   );
-
   const shouldShowLeftDots = leftSiblingIndex > 2;
   const shouldShowRightDots = rightSiblingIndex < totalPageCount - 1;
-
   const firstPageIndex = 1;
   const lastPageIndex = totalPageCount;
-
   if (!shouldShowLeftDots && shouldShowRightDots) {
     const leftItemCount = 3 + 2 * siblingCount;
     const leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
     return [...leftRange, "RIGHT_DOTS", lastPageIndex];
   }
-
   if (shouldShowLeftDots && !shouldShowRightDots) {
     const rightItemCount = 3 + 2 * siblingCount;
     const rightRange = Array.from(
@@ -94,7 +96,6 @@ const paginationRange = computed(() => {
     );
     return [firstPageIndex, "LEFT_DOTS", ...rightRange];
   }
-
   if (shouldShowLeftDots && shouldShowRightDots) {
     const middleRange = Array.from(
       { length: rightSiblingIndex - leftSiblingIndex + 1 },
@@ -115,29 +116,13 @@ const changePage = (newPage) => {
     currentPage.value = newPage;
   }
 };
-
-const debounceSearch = () => {
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value);
-  }
-  searchTimeout.value = setTimeout(() => {
-    currentPage.value = 0;
-  }, 500);
-};
 </script>
 
 <template>
   <div>
-    <div class="search-container">
-      <input
-        v-model="searchQuery"
-        @input="debounceSearch"
-        placeholder="Search characters..."
-        class="search-input"
-      />
-    </div>
-
-    <div v-if="pending" class="loading">Loading characters...</div>
+    <p v-if="pending" class="text-white text-center mb-2">
+      Loading characters...
+    </p>
 
     <div v-else-if="error" class="error">
       Failed to load characters. Please try again.
@@ -183,7 +168,7 @@ const debounceSearch = () => {
         class="w-[24px] text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         aria-label="First page"
       >
-        <<
+        &lt;&lt;
       </button>
       <button
         @click="changePage(currentPage - 1)"
@@ -191,9 +176,8 @@ const debounceSearch = () => {
         class="w-[24px] text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         aria-label="Previous page"
       >
-        <
+        &lt;
       </button>
-
       <template v-for="(pageNumber, index) in paginationRange" :key="index">
         <template
           v-if="pageNumber === 'LEFT_DOTS' || pageNumber === 'RIGHT_DOTS'"
@@ -214,14 +198,13 @@ const debounceSearch = () => {
           </button>
         </template>
       </template>
-
       <button
         @click="changePage(currentPage + 1)"
         :disabled="currentPage >= totalPages - 1"
         class="w-[24px] text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         aria-label="Next page"
       >
-        >
+        &gt;
       </button>
       <button
         @click="changePage(totalPages - 1)"
@@ -229,7 +212,7 @@ const debounceSearch = () => {
         class="w-[24px] text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         aria-label="Last page"
       >
-        >>
+        &gt;&gt;
       </button>
     </div>
   </div>

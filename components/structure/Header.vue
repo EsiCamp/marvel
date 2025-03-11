@@ -1,3 +1,19 @@
+<script setup>
+import { ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+
+const useSearch = () => useState("marvelSearch", () => "");
+const searchQuery = useSearch();
+const route = useRoute();
+const router = useRouter();
+
+const handleSearch = () => {
+  if (route.path !== "/") {
+    router.push("/");
+  }
+};
+</script>
+
 <template>
   <header class="header px-4 md:px-0 pt-2.5 pb-6">
     <div class="flex flex-col gap-y-[26px] max-w-[1608px] mx-auto">
@@ -11,10 +27,11 @@
       </div>
       <div class="flex items-center gap-4 p-4 rounded-lg bg-[#2C2E30]">
         <input
+          v-model="searchQuery"
           placeholder="Search for characters..."
           class="bg-[#3B3D3F] px-4 py-[13.5px] rounded-sm text-sm leading-[21px] font-normal text-white w-full h-full"
         />
-        <button class="bg-[#DC2626] p-4 rounded-sm">
+        <button @click="handleSearch" class="bg-[#DC2626] p-4 rounded-sm">
           <svg
             width="14"
             height="14"
