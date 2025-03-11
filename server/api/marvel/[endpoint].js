@@ -3,12 +3,11 @@ import CryptoJS from "crypto-js";
 const config = useRuntimeConfig();
 const API_PUBLIC_KEY = config.public.marvelPublicKey;
 const API_PRIVATE_KEY = config.marvelPrivateKey;
-const API_BASE_URL = "https://gateway.marvel.com/v1/public";
+const API_BASE_URL = config.public.marvelBaseUrl;
 
 const getAuthParams = () => {
   const ts = new Date().getTime();
   const hash = CryptoJS.MD5(ts + API_PRIVATE_KEY + API_PUBLIC_KEY).toString();
-
   return {
     ts,
     apikey: API_PUBLIC_KEY,
@@ -18,9 +17,7 @@ const getAuthParams = () => {
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
-
   const endpoint = event.context.params.endpoint;
-
   const authParams = getAuthParams();
   const queryParams = new URLSearchParams({
     ...authParams,

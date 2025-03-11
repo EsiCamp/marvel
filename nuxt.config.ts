@@ -11,7 +11,17 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: "node-server",
+    storage: {
+      data: {
+        driver: "memory",
+      },
+    },
   },
+
+  // routeRules: {
+  //   "/": { swr: 300 },
+  //   "/character/**": { swr: 600 },
+  // },
 
   runtimeConfig: {
     marvelPrivateKey:
@@ -20,10 +30,38 @@ export default defineNuxtConfig({
     public: {
       marvelPublicKey:
         process.env.MARVEL_PUBLIC_KEY || "d8c360932c6089f76d4e67868fdbed47",
+      marvelBaseUrl:
+        process.env.MARVEL_BASE_URL || "https://gateway.marvel.com/v1/public",
     },
+  },
+
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: "en",
+      },
+      meta: [
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+      ],
+      link: [
+        { rel: "dns-prefetch", href: "https://gateway.marvel.com" },
+        { rel: "preconnect", href: "https://gateway.marvel.com" },
+      ],
+    },
+    keepalive: true,
   },
 
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            marvel: ["~/services/marvel.js"],
+          },
+        },
+      },
+    },
   },
 });

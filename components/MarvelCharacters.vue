@@ -1,11 +1,9 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useRouter } from "vue-router";
 import marvelService from "~/services/marvel";
 
-const router = useRouter();
 const currentPage = ref(0);
-const pageSize = ref(20);
+const pageSize = ref(12);
 const searchQuery = ref("");
 const searchTimeout = ref(null);
 
@@ -48,12 +46,6 @@ const hasMorePages = computed(() => {
   return characters.value.length >= pageSize.value;
 });
 
-const getSecureImageUrl = (thumbnail, size = "portrait_xlarge") => {
-  if (!thumbnail) return "";
-  const path = thumbnail.path.replace("http:", "https:");
-  return `${path}/${size}.${thumbnail.extension}`;
-};
-
 const changePage = (newPage) => {
   if (newPage >= 0) {
     currentPage.value = newPage;
@@ -68,16 +60,10 @@ const debounceSearch = () => {
     currentPage.value = 0;
   }, 500);
 };
-
-const selectCharacter = (character) => {
-  router.push(`/character/${character.id}`);
-};
 </script>
 
 <template>
   <div class="marvel-characters">
-    <h1>Marvel Characters</h1>
-
     <div class="search-container">
       <input
         v-model="searchQuery"
@@ -94,22 +80,32 @@ const selectCharacter = (character) => {
       <button @click="refresh" class="retry-button">Retry</button>
     </div>
 
-    <div v-else class="characters-grid">
+    <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-6">
       <div
         v-for="character in characters"
         :key="character.id"
-        class="character-card"
-        @click="selectCharacter(character)"
+        class="flex flex-col gap-y-4 p-4 border border-transparent hover:border-[#404244] transition duration-300 rounded-lg"
       >
-        <div class="character-image">
+        <NuxtLink
+          :to="`/character/${character.id}`"
+          :title="character.name"
+          class="rounded-lg block"
+        >
           <img
-            :src="getSecureImageUrl(character.thumbnail)"
+            :src="`${character.thumbnail.path}.${character.thumbnail.extension}`"
             :alt="character.name"
+            width="216"
+            height="216"
+            class="aspect-[296/391] md:aspect-[352/469] w-full block h-auto rounded-lg"
           />
-        </div>
-        <div class="character-info">
+        </NuxtLink>
+        <NuxtLink
+          :to="`/character/${character.id}`"
+          :title="character.name"
+          class="text-white text-base font-medium"
+        >
           <h3>{{ character.name }}</h3>
-        </div>
+        </NuxtLink>
       </div>
     </div>
 
@@ -133,102 +129,3 @@ const selectCharacter = (character) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.marvel-characters {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.search-container {
-  margin-bottom: 20px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.characters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.character-card {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  cursor: pointer;
-  background-color: #fff;
-}
-
-.character-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
-.character-image img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.character-info {
-  padding: 15px;
-}
-
-.character-info h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.pagination {
-  margin-top: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-}
-
-.pagination-button {
-  padding: 8px 16px;
-  background-color: #f0141e;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.pagination-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.loading,
-.error {
-  text-align: center;
-  padding: 50px;
-  font-size: 18px;
-}
-
-.error {
-  color: #f0141e;
-}
-
-.retry-button {
-  margin-left: 10px;
-  padding: 8px 16px;
-  background-color: #f0141e;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-</style>
