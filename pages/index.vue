@@ -1,5 +1,6 @@
 <script setup>
 import { useHead } from "#app";
+import MarvelCharacters from "~/components/home/MarvelCharacters.vue";
 
 useHead({
   title: "Marvel Characters",

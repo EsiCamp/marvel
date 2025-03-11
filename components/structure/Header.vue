@@ -1,9 +1,7 @@
 <script setup>
-import { ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const useSearch = () => useState("marvelSearch", () => "");
-const searchQuery = useSearch();
+const searchQuery = useState("marvelSearch", () => "");
 const route = useRoute();
 const router = useRouter();
 

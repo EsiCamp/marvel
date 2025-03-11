@@ -7,5 +7,4 @@ import Header from "@/components/structure/Header.vue";
   <main>
     <slot />
   </main>
-  <!-- <Footer /> -->
 </template>
