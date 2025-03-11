@@ -1,151 +1,127 @@
-// pages/character/[id].vue
 <script setup>
-import { ref, onMounted, onServerPrefetch } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useHead } from "#app";
 import marvelService from "~/services/marvel";
 
 const route = useRoute();
 const router = useRouter();
-const character = ref(null);
-const loading = ref(true);
-const error = ref(null);
-const comicsList = ref([]);
+const characterId = route.params.id;
 
-// Set page metadata
-const updateMetadata = () => {
-  if (character.value) {
-    useHead({
-      title: `${character.value.name} | Marvel Character`,
-      meta: [
-        {
-          name: "description",
-          content:
-            character.value.description ||
-            `Details about ${character.value.name} from Marvel Comics`,
-        },
-        {
-          name: "keywords",
-          content: `marvel, ${character.value.name}, superheroes, comics, character`,
-        },
-      ],
-    });
-  } else {
-    useHead({
-      title: "Character Details | Marvel Explorer",
-      meta: [
-        { name: "description", content: "Details about Marvel characters" },
-        {
-          name: "keywords",
-          content: "marvel, superheroes, comics, characters",
-        },
-      ],
-    });
+const {
+  data: characterData,
+  pending: characterPending,
+  error: characterError,
+} = await useAsyncData(
+  `character-${characterId}`,
+  async () => {
+    const response = await marvelService.getCharacterById(characterId);
+    if (response.code === 200 && response.data.results.length > 0) {
+      return response.data.results[0];
+    }
+    throw new Error("Character not found");
+  },
+  {
+    server: true,
+    lazy: false,
   }
-};
+);
 
-// Function to convert HTTP URLs to HTTPS
+const hasCharacter = computed(
+  () => characterData.value !== null && characterData.value !== undefined
+);
+
+const { data: comicsList, pending: comicsPending } = await useAsyncData(
+  `comics-${characterId}`,
+  async () => {
+    if (!hasCharacter.value) return [];
+    try {
+      const params = {
+        limit: 10,
+        orderBy: "-onsaleDate",
+        characters: characterId,
+      };
+      const response = await marvelService.getComics(params);
+      if (response.code === 200) {
+        return response.data.results;
+      }
+      return [];
+    } catch (err) {
+      console.error("Error fetching comics:", err);
+      return [];
+    }
+  },
+  {
+    server: true,
+    lazy: false,
+    watch: [characterData],
+  }
+);
+
+useHead(() => ({
+  title: hasCharacter.value
+    ? `${characterData.value?.name} | Marvel Character`
+    : "Character Details | Marvel Explorer",
+  meta: [
+    {
+      name: "description",
+      content:
+        hasCharacter.value && characterData.value?.description
+          ? characterData.value.description
+          : hasCharacter.value
+          ? `Details about ${characterData.value?.name} from Marvel Comics`
+          : "Details about Marvel characters",
+    },
+    {
+      name: "keywords",
+      content: hasCharacter.value
+        ? `marvel, ${characterData.value?.name}, superheroes, comics, character`
+        : "marvel, superheroes, comics, characters",
+    },
+  ],
+}));
+
 const getSecureImageUrl = (thumbnail, size = "portrait_incredible") => {
   if (!thumbnail) return "";
   const path = thumbnail.path.replace("http:", "https:");
   return `${path}/${size}.${thumbnail.extension}`;
 };
 
-// Fetch character data
-const fetchCharacter = async () => {
-  const characterId = route.params.id;
-  if (!characterId) {
-    router.push("/");
-    return;
-  }
-
-  loading.value = true;
-  error.value = null;
-
-  try {
-    const response = await marvelService.getCharacterById(characterId);
-
-    if (response.code === 200 && response.data.results.length > 0) {
-      character.value = response.data.results[0];
-      updateMetadata();
-
-      // Fetch comics if character has any
-      if (character.value.comics && character.value.comics.available > 0) {
-        await fetchCharacterComics(characterId);
-      }
-    } else {
-      error.value = "Character not found";
-      router.push("/");
-    }
-  } catch (err) {
-    error.value = "Failed to load character details. Please try again.";
-    console.error(err);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Fetch comics for the character
-const fetchCharacterComics = async (characterId) => {
-  try {
-    const params = {
-      limit: 10,
-      orderBy: "-onsaleDate",
-      characters: characterId,
-    };
-
-    const response = await marvelService.getComics(params);
-
-    if (response.code === 200) {
-      comicsList.value = response.data.results;
-    }
-  } catch (err) {
-    console.error("Error fetching comics:", err);
-  }
-};
-
-// Go back to characters list
 const goBack = () => {
   router.push("/");
 };
 
-// For SSR prefetching
-onServerPrefetch(async () => {
-  await fetchCharacter();
-});
+const isLoading = computed(() => characterPending.value || comicsPending.value);
 
-// For client-side
-onMounted(() => {
-  if (!character.value) {
-    fetchCharacter();
-  }
-});
+if (characterError.value) {
+  console.error("Character not found, redirecting to home page");
+}
 </script>
 
 <template>
   <div class="character-detail-page">
     <button @click="goBack" class="back-button">← Back to Characters</button>
 
-    <div v-if="loading" class="loading">Loading character details...</div>
+    <div v-if="isLoading" class="loading">Loading character details...</div>
 
-    <div v-else-if="error" class="error">
-      {{ error }}
-    </div>
+    <div v-else-if="characterError" class="error">Character not found</div>
 
-    <div v-else-if="character" class="character-container">
+    <div v-else-if="characterData" class="character-container">
       <div class="character-header">
         <div class="character-image">
           <img
-            :src="getSecureImageUrl(character.thumbnail)"
-            :alt="character.name"
+            :src="getSecureImageUrl(characterData.thumbnail)"
+            :alt="characterData.name"
           />
         </div>
 
         <div class="character-info">
-          <h1>{{ character.name }}</h1>
+          <h1>{{ characterData.name }}</h1>
 
           <div class="character-description">
-            <p v-if="character.description">{{ character.description }}</p>
+            <p v-if="characterData.description">
+              {{ characterData.description }}
+            </p>
             <p v-else>No description available for this character.</p>
           </div>
 
@@ -153,33 +129,32 @@ onMounted(() => {
             <div class="stat">
               <span class="stat-label">Comics:</span>
               <span class="stat-value">{{
-                character.comics?.available || 0
+                characterData.comics?.available || 0
               }}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Series:</span>
               <span class="stat-value">{{
-                character.series?.available || 0
+                characterData.series?.available || 0
               }}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Stories:</span>
               <span class="stat-value">{{
-                character.stories?.available || 0
+                characterData.stories?.available || 0
               }}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Events:</span>
               <span class="stat-value">{{
-                character.events?.available || 0
+                characterData.events?.available || 0
               }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Comics section -->
-      <div v-if="comicsList.length > 0" class="comics-section">
+      <div v-if="comicsList && comicsList.length > 0" class="comics-section">
         <h2>Recent Comics</h2>
         <div class="comics-grid">
           <div v-for="comic in comicsList" :key="comic.id" class="comic-card">
@@ -199,15 +174,14 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Links section -->
       <div
-        v-if="character.urls && character.urls.length > 0"
+        v-if="characterData.urls && characterData.urls.length > 0"
         class="links-section"
       >
         <h2>External Resources</h2>
         <div class="links-list">
           <a
-            v-for="(link, index) in character.urls"
+            v-for="(link, index) in characterData.urls"
             :key="index"
             :href="link.url"
             target="_blank"
@@ -226,11 +200,6 @@ onMounted(() => {
           </a>
         </div>
       </div>
-    </div>
-
-    <!-- Marvel attribution -->
-    <div class="attribution">
-      Data provided by Marvel. © {{ new Date().getFullYear() }} MARVEL
     </div>
   </div>
 </template>
@@ -416,12 +385,5 @@ onMounted(() => {
 
 .error {
   color: #f0141e;
-}
-
-.attribution {
-  margin-top: 40px;
-  text-align: center;
-  font-size: 12px;
-  color: #666;
 }
 </style>

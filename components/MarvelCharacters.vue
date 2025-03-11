@@ -1,18 +1,52 @@
 <script setup>
-import { ref, onMounted, onServerPrefetch } from "vue";
-import { useAsyncData } from "nuxt/app";
-import marvelService from "~/services/marvel";
+import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
-const router = useRouter();
+import marvelService from "~/services/marvel";
 
-const characters = ref([]);
-const loading = ref(true);
-const error = ref(null);
+const router = useRouter();
 const currentPage = ref(0);
 const pageSize = ref(20);
 const searchQuery = ref("");
 const searchTimeout = ref(null);
-const selectedCharacter = ref(null);
+
+const fetchCharactersData = async () => {
+  const offset = currentPage.value * pageSize.value;
+  const params = {
+    limit: pageSize.value,
+    offset: offset,
+  };
+  if (searchQuery.value) {
+    params.nameStartsWith = searchQuery.value;
+  }
+  return await marvelService.getCharacters(params);
+};
+
+const {
+  data: charactersResponse,
+  pending,
+  error,
+  refresh,
+} = await useAsyncData("characters-data", fetchCharactersData, {
+  server: true,
+  lazy: false,
+  watch: [currentPage, searchQuery],
+});
+
+const characters = computed(() => {
+  if (
+    charactersResponse.value &&
+    charactersResponse.value.code === 200 &&
+    charactersResponse.value.data &&
+    charactersResponse.value.data.results
+  ) {
+    return charactersResponse.value.data.results;
+  }
+  return [];
+});
+
+const hasMorePages = computed(() => {
+  return characters.value.length >= pageSize.value;
+});
 
 const getSecureImageUrl = (thumbnail, size = "portrait_xlarge") => {
   if (!thumbnail) return "";
@@ -20,50 +54,9 @@ const getSecureImageUrl = (thumbnail, size = "portrait_xlarge") => {
   return `${path}/${size}.${thumbnail.extension}`;
 };
 
-const fetchCharacters = async () => {
-  loading.value = true;
-  error.value = null;
-
-  try {
-    const offset = currentPage.value * pageSize.value;
-    const params = {
-      limit: pageSize.value,
-      offset: offset,
-    };
-
-    if (searchQuery.value) {
-      params.nameStartsWith = searchQuery.value;
-    }
-
-    const response = await marvelService.getCharacters(params);
-
-    if (response.code === 200) {
-      characters.value = response.data.results;
-    } else {
-      error.value = `API Error: ${response.status}`;
-    }
-  } catch (err) {
-    error.value = "Failed to load characters. Please try again.";
-    console.error(err);
-  } finally {
-    loading.value = false;
-  }
-};
-
-onServerPrefetch(async () => {
-  await fetchCharacters();
-});
-
-onMounted(() => {
-  if (characters.value.length === 0) {
-    fetchCharacters();
-  }
-});
-
 const changePage = (newPage) => {
   if (newPage >= 0) {
     currentPage.value = newPage;
-    fetchCharacters();
   }
 };
 
@@ -71,10 +64,8 @@ const debounceSearch = () => {
   if (searchTimeout.value) {
     clearTimeout(searchTimeout.value);
   }
-
   searchTimeout.value = setTimeout(() => {
     currentPage.value = 0;
-    fetchCharacters();
   }, 500);
 };
 
@@ -96,10 +87,11 @@ const selectCharacter = (character) => {
       />
     </div>
 
-    <div v-if="loading" class="loading">Loading characters...</div>
+    <div v-if="pending" class="loading">Loading characters...</div>
 
     <div v-else-if="error" class="error">
-      {{ error }}
+      Failed to load characters. Please try again.
+      <button @click="refresh" class="retry-button">Retry</button>
     </div>
 
     <div v-else class="characters-grid">
@@ -121,6 +113,7 @@ const selectCharacter = (character) => {
       </div>
     </div>
 
+    <!-- Pagination -->
     <div class="pagination">
       <button
         :disabled="currentPage === 0"
@@ -131,62 +124,12 @@ const selectCharacter = (character) => {
       </button>
       <span>Page {{ currentPage + 1 }}</span>
       <button
-        :disabled="characters.length < pageSize"
+        :disabled="!hasMorePages"
         @click="changePage(currentPage + 1)"
         class="pagination-button"
       >
         Next
       </button>
-    </div>
-
-    <div v-if="selectedCharacter" class="modal">
-      <div class="modal-content">
-        <span class="close" @click="selectedCharacter = null">&times;</span>
-        <div class="character-detail">
-          <div class="character-detail-image">
-            <img
-              :src="
-                getSecureImageUrl(
-                  selectedCharacter.thumbnail,
-                  'portrait_uncanny'
-                )
-              "
-              :alt="selectedCharacter.name"
-            />
-          </div>
-          <div class="character-detail-info">
-            <h2>{{ selectedCharacter.name }}</h2>
-            <p v-if="selectedCharacter.description">
-              {{ selectedCharacter.description }}
-            </p>
-            <p v-else>No description available.</p>
-
-            <div
-              v-if="
-                selectedCharacter.comics &&
-                selectedCharacter.comics.items.length
-              "
-            >
-              <h3>Featured in Comics:</h3>
-              <ul>
-                <li
-                  v-for="(comic, index) in selectedCharacter.comics.items.slice(
-                    0,
-                    5
-                  )"
-                  :key="index"
-                >
-                  {{ comic.name }}
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="attribution">
-      Data provided by Marvel. © {{ new Date().getFullYear() }} MARVEL
     </div>
   </div>
 </template>
@@ -279,71 +222,13 @@ const selectCharacter = (character) => {
   color: #f0141e;
 }
 
-/* Modal styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 30px;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 800px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: relative;
-}
-
-.close {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 28px;
+.retry-button {
+  margin-left: 10px;
+  padding: 8px 16px;
+  background-color: #f0141e;
+  color: white;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
-}
-
-.character-detail {
-  display: flex;
-  gap: 30px;
-}
-
-.character-detail-image {
-  flex: 0 0 40%;
-}
-
-.character-detail-image img {
-  width: 100%;
-  border-radius: 8px;
-}
-
-.character-detail-info {
-  flex: 1;
-}
-
-.attribution {
-  margin-top: 40px;
-  text-align: center;
-  font-size: 12px;
-  color: #666;
-}
-
-@media (max-width: 768px) {
-  .character-detail {
-    flex-direction: column;
-  }
-
-  .characters-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
 }
 </style>
