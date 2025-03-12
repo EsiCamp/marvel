@@ -1,0 +1,16 @@
+services:
+  nuxt-app:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    working_dir: /app
+    entrypoint: ["npm", "run", "preview"]
+    networks:
+      - v2flydocker_default
+
+networks:
+  v2flydocker_default:
+    external: true
