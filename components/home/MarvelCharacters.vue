@@ -100,6 +100,7 @@ const handlePageChange = (newPage) => {
             width="216"
             height="216"
             class="aspect-[296/391] md:aspect-[352/469] w-full block h-auto rounded-lg"
+            loading="lazy"
           />
         </NuxtLink>
         <NuxtLink

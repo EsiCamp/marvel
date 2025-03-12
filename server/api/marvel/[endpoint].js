@@ -45,6 +45,9 @@ export default defineEventHandler(async (event) => {
     case "comics":
       url = `${API_BASE_URL}/comics?${queryParams}`;
       break;
+    case "series":
+      url = `${API_BASE_URL}/series?${queryParams}`;
+      break;
     default:
       throw createError({
         statusCode: 404,
