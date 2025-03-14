@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import marvelService from "~/services/marvel";
 import Pagination from "~/components/structure/Pagination.vue";
 
 const searchQuery = useState("marvelSearch", () => "");
@@ -18,7 +17,14 @@ const fetchCharactersData = async () => {
   if (searchQuery.value) {
     params.nameStartsWith = searchQuery.value;
   }
-  return await marvelService.getCharacters(params);
+  const baseUrl = process.client
+    ? window.location.origin
+    : "http://localhost:3000";
+  const queryParams = new URLSearchParams(params).toString();
+  const response = await fetch(
+    `${baseUrl}/api/marvel/characters?${queryParams}`
+  );
+  return await response.json();
 };
 
 const {
@@ -112,6 +118,7 @@ const handlePageChange = (newPage) => {
         </NuxtLink>
       </div>
     </div>
+
     <Pagination
       :current-page="currentPage"
       :total-pages="totalPages"

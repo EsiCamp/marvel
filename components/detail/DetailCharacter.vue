@@ -1,6 +1,4 @@
 <script setup>
-import { ref, computed } from "vue";
-
 const props = defineProps({
   items: {
     type: Array,
@@ -37,18 +35,15 @@ const getItemTitle = (item) => {
     <h2 class="pt-8 pb-4 text-white text-lg font-medium">
       {{ title }}
     </h2>
-
     <div v-if="loading" class="text-white text-center py-8">
       Loading {{ title.toLowerCase() }}...
     </div>
-
     <div
       v-else-if="!items || items.length === 0"
       class="text-gray-400 text-center py-8"
     >
       {{ emptyMessage }}
     </div>
-
     <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-6">
       <div
         v-for="item in items"

@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useHead } from "#app";
-import marvelService from "~/services/marvel";
+import { useCharacter } from "~/composables/useCharacter";
 import DetailCharacter from "~/components/detail/DetailCharacter.vue";
 import CharacterInfo from "~/components/detail/CharacterInfo.vue";
 
@@ -12,6 +12,8 @@ definePageMeta({
 
 const route = useRoute();
 const characterId = route.params.id;
+const { getCharacterById, getCharacterComics, getCharacterSeries } =
+  useCharacter();
 
 const {
   data: characterData,
@@ -20,7 +22,7 @@ const {
 } = await useAsyncData(
   `character-${characterId}`,
   async () => {
-    const response = await marvelService.getCharacterById(characterId);
+    const response = await getCharacterById(characterId);
     if (response.code === 200 && response.data.results.length > 0) {
       return response.data.results[0];
     }
@@ -44,9 +46,8 @@ const { data: comicsList, pending: comicsPending } = await useAsyncData(
       const params = {
         limit: 10,
         orderBy: "-onsaleDate",
-        characters: characterId,
       };
-      const response = await marvelService.getComics(params);
+      const response = await getCharacterComics(characterId, params);
       if (response.code === 200) {
         return response.data.results;
       }
@@ -70,9 +71,8 @@ const { data: seriesList, pending: seriesPending } = await useAsyncData(
     try {
       const params = {
         limit: 10,
-        characters: characterId,
       };
-      const response = await marvelService.getSeries(params);
+      const response = await getCharacterSeries(characterId, params);
       if (response.code === 200) {
         return response.data.results;
       }
@@ -167,7 +167,6 @@ const getImageUrl = (thumbnail) => {
 
         <div v-else-if="characterData">
           <CharacterInfo :character="characterData" />
-
           <DetailCharacter
             :items="comicsList || []"
             :loading="comicsPending"
@@ -175,7 +174,6 @@ const getImageUrl = (thumbnail) => {
             emptyMessage="No comics available for this character."
             class="pb-8"
           />
-
           <DetailCharacter
             :items="displaySeries"
             :loading="seriesPending"

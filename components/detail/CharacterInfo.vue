@@ -25,16 +25,20 @@ const getImageUrl = (thumbnail) => {
         class="w-full h-auto rounded-lg aspect-[180/180] md:aspect-[240/240]"
       />
     </div>
-
     <div class="flex flex-col md:justify-center gap-4">
       <h1 class="text-white font-[32px]">{{ character.name }}</h1>
+
       <p
         v-if="character.description"
         class="text-white text-xs md:text-sm text-[#F2F2F3]"
       >
         {{ character.description }}
       </p>
-      <p v-else>No description available for this character.</p>
+
+      <p v-else class="text-white text-xs md:text-sm text-[#F2F2F3]">
+        No description available for this character.
+      </p>
+
       <div class="flex gap-4">
         <NuxtLink
           to="#"
