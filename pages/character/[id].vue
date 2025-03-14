@@ -31,6 +31,8 @@ const {
   {
     server: true,
     lazy: false,
+    key: `character-${characterId}`,
+    maxAge: 3600,
   }
 );
 
@@ -141,13 +143,6 @@ const isLoading = computed(
 if (characterError.value) {
   console.error("Character not found, redirecting to home page");
 }
-
-const getImageUrl = (thumbnail) => {
-  if (!thumbnail || !thumbnail.path || !thumbnail.extension) {
-    return "https://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available.jpg";
-  }
-  return `${thumbnail.path}.${thumbnail.extension}`;
-};
 </script>
 
 <template>

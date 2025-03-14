@@ -18,10 +18,10 @@ export default defineNuxtConfig({
     },
   },
 
-  // routeRules: {
-  //   "/": { swr: 300 },
-  //   "/character/**": { swr: 600 },
-  // },
+  routeRules: {
+    "/": { swr: 300 },
+    "/character/**": { swr: 600 },
+  },
 
   runtimeConfig: {
     marvelPrivateKey:
@@ -55,13 +55,6 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
     build: {
       chunkSizeWarningLimit: 1000,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            marvel: ["~/services/marvel.js"],
-          },
-        },
-      },
     },
   },
 });

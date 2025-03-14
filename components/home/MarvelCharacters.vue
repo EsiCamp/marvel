@@ -118,7 +118,6 @@ const handlePageChange = (newPage) => {
         </NuxtLink>
       </div>
     </div>
-
     <Pagination
       :current-page="currentPage"
       :total-pages="totalPages"
